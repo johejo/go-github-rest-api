@@ -25,6 +25,6 @@ jobs:
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             git add -A
-            git commit -m "Update generated code for https://github.com/github/rest-api-description/commits/$(cat rest-api-description_sha.txt)"
+            git commit -m "Update generated code for https://github.com/github/rest-api-description/commit/$(cat rest-api-description_sha.txt)"
             git push origin main
           fi
