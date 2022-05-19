@@ -4026,9 +4026,11 @@ type GpgKey struct {
 	ExpiresAt    *time.Time `json:"expires_at"`
 	Id           int        `json:"id"`
 	KeyId        string     `json:"key_id"`
+	Name         *string    `json:"name"`
 	PrimaryKeyId *int       `json:"primary_key_id"`
 	PublicKey    string     `json:"public_key"`
 	RawKey       *string    `json:"raw_key"`
+	Revoked      bool       `json:"revoked"`
 	Subkeys      []struct {
 		CanCertify        *bool          `json:"can_certify,omitempty"`
 		CanEncryptComms   *bool          `json:"can_encrypt_comms,omitempty"`
@@ -4042,6 +4044,7 @@ type GpgKey struct {
 		PrimaryKeyId      *int           `json:"primary_key_id,omitempty"`
 		PublicKey         *string        `json:"public_key,omitempty"`
 		RawKey            *string        `json:"raw_key"`
+		Revoked           *bool          `json:"revoked,omitempty"`
 		Subkeys           *[]interface{} `json:"subkeys,omitempty"`
 	} `json:"subkeys"`
 }
@@ -15382,6 +15385,9 @@ type UserslistGpgKeysForAuthenticatedUserParams struct {
 type UserscreateGpgKeyForAuthenticatedUserJSONBody struct {
 	// A GPG key in ASCII-armored format.
 	ArmoredPublicKey string `json:"armored_public_key"`
+
+	// A descriptive name for the new key.
+	Name *string `json:"name,omitempty"`
 }
 
 // AppslistInstallationsForAuthenticatedUserParams defines parameters for AppslistInstallationsForAuthenticatedUser.
