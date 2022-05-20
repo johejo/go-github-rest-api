@@ -7295,6 +7295,13 @@ type ReactionRollup struct {
 	Url        string `json:"url"`
 }
 
+// A workflow referenced/reused by the initial caller workflow
+type ReferencedWorkflow struct {
+	Path string  `json:"path"`
+	Ref  *string `json:"ref,omitempty"`
+	Sha  string  `json:"sha"`
+}
+
 // Referrer Traffic
 type ReferrerTraffic struct {
 	Count    int    `json:"count"`
@@ -9423,9 +9430,13 @@ type WorkflowRun struct {
 	Name   *string `json:"name"`
 	NodeId string  `json:"node_id"`
 
+	// The full path of the workflow
+	Path string `json:"path"`
+
 	// The URL to the previous attempted run of this workflow, if one exists.
-	PreviousAttemptUrl *string               `json:"previous_attempt_url"`
-	PullRequests       *[]PullRequestMinimal `json:"pull_requests"`
+	PreviousAttemptUrl  *string               `json:"previous_attempt_url"`
+	PullRequests        *[]PullRequestMinimal `json:"pull_requests"`
+	ReferencedWorkflows *[]ReferencedWorkflow `json:"referenced_workflows"`
 
 	// Minimal Repository
 	Repository MinimalRepository `json:"repository"`
