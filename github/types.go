@@ -4947,6 +4947,7 @@ type Migration struct {
 	Id                   int            `json:"id"`
 	LockRepositories     bool           `json:"lock_repositories"`
 	NodeId               string         `json:"node_id"`
+	OrgMetadataOnly      bool           `json:"org_metadata_only"`
 
 	// Simple User
 	Owner        *NullableSimpleUser `json:"owner"`
@@ -6465,16 +6466,18 @@ type ProtectedBranch struct {
 	} `json:"required_linear_history,omitempty"`
 	RequiredPullRequestReviews *struct {
 		BypassPullRequestAllowances *struct {
-			Teams []Team       `json:"teams"`
-			Users []SimpleUser `json:"users"`
+			Apps  *[]Integration `json:"apps,omitempty"`
+			Teams []Team         `json:"teams"`
+			Users []SimpleUser   `json:"users"`
 		} `json:"bypass_pull_request_allowances,omitempty"`
 		DismissStaleReviews   *bool `json:"dismiss_stale_reviews,omitempty"`
 		DismissalRestrictions *struct {
-			Teams    []Team       `json:"teams"`
-			TeamsUrl string       `json:"teams_url"`
-			Url      string       `json:"url"`
-			Users    []SimpleUser `json:"users"`
-			UsersUrl string       `json:"users_url"`
+			Apps     *[]Integration `json:"apps,omitempty"`
+			Teams    []Team         `json:"teams"`
+			TeamsUrl string         `json:"teams_url"`
+			Url      string         `json:"url"`
+			Users    []SimpleUser   `json:"users"`
+			UsersUrl string         `json:"users_url"`
 		} `json:"dismissal_restrictions,omitempty"`
 		RequireCodeOwnerReviews      *bool  `json:"require_code_owner_reviews,omitempty"`
 		RequiredApprovingReviewCount *int   `json:"required_approving_review_count,omitempty"`
@@ -6501,8 +6504,11 @@ type ProtectedBranchAdminEnforced struct {
 
 // Protected Branch Pull Request Review
 type ProtectedBranchPullRequestReview struct {
-	// Allow specific users or teams to bypass pull request requirements.
+	// Allow specific users, teams, or apps to bypass pull request requirements.
 	BypassPullRequestAllowances *struct {
+		// The list of apps allowed to bypass pull request requirements.
+		Apps *[]Integration `json:"apps,omitempty"`
+
 		// The list of teams allowed to bypass pull request requirements.
 		Teams *[]Team `json:"teams,omitempty"`
 
@@ -6511,6 +6517,9 @@ type ProtectedBranchPullRequestReview struct {
 	} `json:"bypass_pull_request_allowances,omitempty"`
 	DismissStaleReviews   bool `json:"dismiss_stale_reviews"`
 	DismissalRestrictions *struct {
+		// The list of apps with review dismissal access.
+		Apps *[]Integration `json:"apps,omitempty"`
+
 		// The list of teams with review dismissal access.
 		Teams    *[]Team `json:"teams,omitempty"`
 		TeamsUrl *string `json:"teams_url,omitempty"`
@@ -11258,6 +11267,12 @@ type MigrationsstartForOrgJSONBody struct {
 	// Indicates whether attachments should be excluded from the migration (to reduce migration archive file size).
 	ExcludeAttachments *bool `json:"exclude_attachments,omitempty"`
 
+	// Indicates whether the repository git data should be excluded from the migration.
+	ExcludeGitData *bool `json:"exclude_git_data,omitempty"`
+
+	// Indicates whether metadata should be excluded and only git source should be included for the migration.
+	ExcludeMetadata *bool `json:"exclude_metadata,omitempty"`
+
 	// Indicates whether projects owned by the organization or users should be excluded. from the migration.
 	ExcludeOwnerProjects *bool `json:"exclude_owner_projects,omitempty"`
 
@@ -11266,6 +11281,9 @@ type MigrationsstartForOrgJSONBody struct {
 
 	// Indicates whether repositories should be locked (to prevent manipulation) while migrating data.
 	LockRepositories *bool `json:"lock_repositories,omitempty"`
+
+	// Indicates whether this should only include organization metadata (repositories array should be empty and will ignore other flags).
+	OrgMetadataOnly *bool `json:"org_metadata_only,omitempty"`
 
 	// A list of arrays indicating which repositories should be migrated.
 	Repositories []string `json:"repositories"`
@@ -12277,7 +12295,7 @@ type ReposupdateBranchProtectionJSONBody struct {
 	// Permits force pushes to the protected branch by anyone with write access to the repository. Set to `true` to allow force pushes. Set to `false` or `null` to block force pushes. Default: `false`. For more information, see "[Enabling force pushes to a protected branch](https://docs.github.com/en/github/administering-a-repository/enabling-force-pushes-to-a-protected-branch)" in the GitHub Help documentation."
 	AllowForcePushes *bool `json:"allow_force_pushes"`
 
-	// Blocks creation of new branches which match the branch protection pattern. Set to `true` to prohibit new branch creation. Default: `false`.
+	// If set to `true`, the `restrictions` branch protection settings which limits who can push will also block pushes which create new branches, unless the push is initiated by a user, team, or app which has the ability to push. Set to `true` to restrict new branch creation. Default: `false`.
 	BlockCreations *bool `json:"block_creations,omitempty"`
 
 	// Enforce all configured restrictions for administrators. Set to `true` to enforce required status checks for repository administrators. Set to `null` to disable.
@@ -12291,8 +12309,11 @@ type ReposupdateBranchProtectionJSONBody struct {
 
 	// Require at least one approving review on a pull request, before merging. Set to `null` to disable.
 	RequiredPullRequestReviews *struct {
-		// Allow specific users or teams to bypass pull request requirements.
+		// Allow specific users, teams, or apps to bypass pull request requirements.
 		BypassPullRequestAllowances *struct {
+			// The list of app `slug`s allowed to bypass pull request requirements.
+			Apps *[]string `json:"apps,omitempty"`
+
 			// The list of team `slug`s allowed to bypass pull request requirements.
 			Teams *[]string `json:"teams,omitempty"`
 
@@ -12303,8 +12324,11 @@ type ReposupdateBranchProtectionJSONBody struct {
 		// Set to `true` if you want to automatically dismiss approving reviews when someone pushes a new commit.
 		DismissStaleReviews *bool `json:"dismiss_stale_reviews,omitempty"`
 
-		// Specify which users and teams can dismiss pull request reviews. Pass an empty `dismissal_restrictions` object to disable. User and team `dismissal_restrictions` are only available for organization-owned repositories. Omit this parameter for personal repositories.
+		// Specify which users, teams, and apps can dismiss pull request reviews. Pass an empty `dismissal_restrictions` object to disable. User and team `dismissal_restrictions` are only available for organization-owned repositories. Omit this parameter for personal repositories.
 		DismissalRestrictions *struct {
+			// The list of app `slug`s with dismissal access
+			Apps *[]string `json:"apps,omitempty"`
+
 			// The list of team `slug`s with dismissal access
 			Teams *[]string `json:"teams,omitempty"`
 
@@ -12352,8 +12376,11 @@ type ReposupdateBranchProtectionJSONBody struct {
 
 // ReposupdatePullRequestReviewProtectionJSONBody defines parameters for ReposupdatePullRequestReviewProtection.
 type ReposupdatePullRequestReviewProtectionJSONBody struct {
-	// Allow specific users or teams to bypass pull request requirements.
+	// Allow specific users, teams, or apps to bypass pull request requirements.
 	BypassPullRequestAllowances *struct {
+		// The list of app `slug`s allowed to bypass pull request requirements.
+		Apps *[]string `json:"apps,omitempty"`
+
 		// The list of team `slug`s allowed to bypass pull request requirements.
 		Teams *[]string `json:"teams,omitempty"`
 
@@ -12364,8 +12391,11 @@ type ReposupdatePullRequestReviewProtectionJSONBody struct {
 	// Set to `true` if you want to automatically dismiss approving reviews when someone pushes a new commit.
 	DismissStaleReviews *bool `json:"dismiss_stale_reviews,omitempty"`
 
-	// Specify which users and teams can dismiss pull request reviews. Pass an empty `dismissal_restrictions` object to disable. User and team `dismissal_restrictions` are only available for organization-owned repositories. Omit this parameter for personal repositories.
+	// Specify which users, teams, and apps can dismiss pull request reviews. Pass an empty `dismissal_restrictions` object to disable. User and team `dismissal_restrictions` are only available for organization-owned repositories. Omit this parameter for personal repositories.
 	DismissalRestrictions *struct {
+		// The list of app `slug`s with dismissal access
+		Apps *[]string `json:"apps,omitempty"`
+
 		// The list of team `slug`s with dismissal access
 		Teams *[]string `json:"teams,omitempty"`
 
@@ -15538,6 +15568,12 @@ type MigrationsstartForAuthenticatedUserJSONBody struct {
 	// Do not include attachments in the migration
 	ExcludeAttachments *bool `json:"exclude_attachments,omitempty"`
 
+	// Indicates whether the repository git data should be excluded from the migration.
+	ExcludeGitData *bool `json:"exclude_git_data,omitempty"`
+
+	// Indicates whether metadata should be excluded and only git source should be included for the migration.
+	ExcludeMetadata *bool `json:"exclude_metadata,omitempty"`
+
 	// Indicates whether projects owned by the organization or users should be excluded.
 	ExcludeOwnerProjects *bool `json:"exclude_owner_projects,omitempty"`
 
@@ -15545,8 +15581,11 @@ type MigrationsstartForAuthenticatedUserJSONBody struct {
 	ExcludeReleases *bool `json:"exclude_releases,omitempty"`
 
 	// Lock the repositories being migrated at the start of the migration
-	LockRepositories *bool    `json:"lock_repositories,omitempty"`
-	Repositories     []string `json:"repositories"`
+	LockRepositories *bool `json:"lock_repositories,omitempty"`
+
+	// Indicates whether this should only include organization metadata (repositories array should be empty and will ignore other flags).
+	OrgMetadataOnly *bool    `json:"org_metadata_only,omitempty"`
+	Repositories    []string `json:"repositories"`
 }
 
 // MigrationsstartForAuthenticatedUserJSONBodyExclude defines parameters for MigrationsstartForAuthenticatedUser.
